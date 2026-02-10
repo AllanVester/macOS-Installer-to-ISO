@@ -40,3 +40,10 @@ jobs:
           mv ./Lion.cdr ./Lion.iso
           
           ls -lh ./Lion.iso
+          
+      - name: Split ISO into 500MB chunks
+        run: |
+          # Create the destination directory
+          mkdir -p ./split
+          # Split the ISO into 500MB parts named Lion.iso.001, .002, etc.
+          split -b 500m -d ./Lion.iso ./split/Lion.iso.
