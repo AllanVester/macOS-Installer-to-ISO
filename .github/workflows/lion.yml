@@ -1,0 +1,65 @@
+name: Build OS X Lion ISO (10.7)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-iso:
+    runs-on: macos-13
+    timeout-minutes: 360
+    steps:
+      - name: Checkout (Optional but good practice)
+        uses: actions/checkout@v4
+
+      - name: Download Lion Disk Image
+        run: |
+          echo "Downloading InstallMacOSX.dmg..."
+          curl -L -o InstallMacOSX.dmg "https://updates.cdn-apple.com/2021/macos/041-7683-20210614-E610947E-C7CE-46EB-8860-D26D71F0D3EA/InstallMacOSX.dmg"
+
+      - name: Install the Lion App
+        run: |
+          echo "Mounting DMG..."
+          hdiutil attach InstallMacOSX.dmg -nobrowse -mountpoint /Volumes/InstallLion
+          
+          echo "Installing Package to /Applications..."
+          # This extracts the 'Install OS X Lion.app' from the pkg
+          sudo installer -pkg /Volumes/InstallLion/InstallMacOSX.pkg -target /
+          
+          echo "Unmounting DMG..."
+          hdiutil detach /Volumes/InstallLion
+          
+          # Verify the app is there
+          ls -d "/Applications/Install OS X Lion.app"
+
+      - name: Create Empty Disk Image
+        run: |
+          # Lion is small (~5.7GB), so 10GB is plenty of space.
+          echo "Creating 10GB sparse image..."
+          hdiutil create -o /tmp/Lion -size 10000m -volname Lion -layout SPUD -fs HFS+J -type SPARSE
+          
+          echo "Mounting image..."
+          hdiutil attach /tmp/Lion.sparseimage -noverify -mountpoint /Volumes/Lion
+
+      - name: Run createinstallmedia (Legacy Mode)
+        run: |
+          echo "Creating install media..."
+          
+          # Lion syntax requires --applicationpath
+          # Lion does NOT support --nointeraction, so we pipe 'yes' to it.
+          
+          yes | sudo "/Applications/Install OS X Lion.app/Contents/Resources/createinstallmedia" \
+            --volume /Volumes/Lion \
+            --applicationpath "/Applications/Install OS X Lion.app"
+
+      - name: Convert to ISO
+        run: |
+          echo "Unmounting..."
+          hdiutil detach /Volumes/Install\ OS\ X\ Lion
+          
+          echo "Converting to ISO..."
+          hdiutil convert /tmp/Lion.sparseimage -format UDTO -o ./Lion.iso
+          
+          echo "Renaming to .iso..."
+          mv ./Lion.iso.cdr ./Lion.iso
+          
+          ls -lh ./Lion.iso
