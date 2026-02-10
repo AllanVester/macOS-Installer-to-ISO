@@ -1,0 +1,67 @@
+name: Build macOS Sequoia ISO
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-iso:
+    runs-on: macos-latest
+    timeout-minutes: 360
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Free up disk space (Attempt)
+        run: |
+          # This helps slightly on standard runners, but usually isn't enough for this task
+          sudo rm -rf /Users/runner/Library/Android/sdk
+          sudo rm -rf /Library/Developer/CommandLineTools
+          df -h
+
+      - name: Download macOS Sequoia Installer
+        run: |
+          echo "Downloading InstallAssistant.pkg..."
+          # Link from your previous message (verify the link is still active/valid)
+          curl -L -o InstallAssistant.pkg "https://swcdn.apple.com/content/downloads/47/16/089-70987-A_PWKNKEFQ1D/sjlq45liw0g5lor3a6i89vz7paml1xpq6w/InstallAssistant.pkg"
+
+      - name: Install the Installer App
+        run: |
+          echo "Installing package..."
+          sudo installer -pkg InstallAssistant.pkg -target /
+          
+          # Verify it exists
+          ls -d /Applications/Install\ macOS\ Sequoia*.app
+          
+          # Delete the pkg to save space immediately
+          rm InstallAssistant.pkg
+
+      - name: Create and Mount Disk Image
+        run: |
+          echo "Creating empty disk image..."
+          # Use a sparse image to save space until it's filled
+          hdiutil create -o /tmp/Sequoia -size 16384m -volname Sequoia -layout SPUD -fs HFS+J -type SPARSE
+          
+          echo "Mounting disk image..."
+          hdiutil attach /tmp/Sequoia.sparseimage -noverify -mountpoint /Volumes/Sequoia
+
+      - name: Create Install Media
+        run: |
+          echo "Running createinstallmedia (this takes time)..."
+          # We use a wildcard (*) because the app name might vary slightly (e.g. "beta")
+          INSTALLER_PATH=$(find /Applications -name "Install macOS Sequoia*.app" -maxdepth 1 | head -n 1)
+          echo "Found installer at: $INSTALLER_PATH"
+          
+          sudo "$INSTALLER_PATH/Contents/Resources/createinstallmedia" --volume /Volumes/Sequoia --nointeraction
+
+      - name: Unmount and Convert to ISO
+        run: |
+          echo "Unmounting..."
+          hdiutil detach /Volumes/Install\ macOS\ Sequoia*
+          
+          echo "Converting to ISO/CDR..."
+          hdiutil convert /tmp/Sequoia.sparseimage -format UDTO -o ./Sequoia-Full.cdr
+          
+          echo "Renaming to .iso..."
+          mv ./Sequoia-Full.cdr ./Sequoia-Full.iso
+          
+          ls -lh ./Sequoia-Full.iso
