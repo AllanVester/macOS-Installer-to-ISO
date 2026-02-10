@@ -1,4 +1,4 @@
-name: Build macOS Sequoia ISO
+name: Build macOS Sequoia ISO (24A335)
 
 on:
   workflow_dispatch:
@@ -22,7 +22,7 @@ jobs:
         run: |
           echo "Downloading InstallAssistant.pkg..."
           # Link from your previous message (verify the link is still active/valid)
-          curl -L -o InstallAssistant.pkg "https://swcdn.apple.com/content/downloads/47/16/089-70987-A_PWKNKEFQ1D/sjlq45liw0g5lor3a6i89vz7paml1xpq6w/InstallAssistant.pkg"
+          curl -L -o InstallAssistant.pkg "https://archive.org/download/macOS-24A335-InstallAssistant/InstallAssistant.pkg"
 
       - name: Install the Installer App
         run: |
@@ -71,4 +71,4 @@ jobs:
           # Create the destination directory
           mkdir -p ./split
           # Split the 16GB ISO into 500MB parts named Sequoia.iso.001, .002, etc.
-          split -b 500m ./Sequoia.iso ./split/Sequoia.iso.
+          split -b 500m -d ./Sequoia.iso ./split/Sequoia.iso.
