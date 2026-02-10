@@ -35,9 +35,8 @@ jobs:
           cp "$LION_APP/Contents/SharedSupport/InstallESD.dmg" ./Lion.dmg
           
           echo "Converting to ISO..."
-          hdiutil convert ./Lion.dmg -format UDTO -o ./Lion.iso
+          hdiutil convert ./Lion.dmg -format UDTO -o ./Lion.cdr
           
-          # hdiutil adds .cdr extension automatically
-          mv ./Lion.iso.cdr ./Lion.iso
+          mv ./Lion.cdr ./Lion.iso
           
           ls -lh ./Lion.iso
