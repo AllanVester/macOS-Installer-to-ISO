@@ -59,17 +59,17 @@ jobs:
           hdiutil detach /Volumes/Install\ macOS\ Sequoia*
           
           echo "Converting to ISO/CDR..."
-          hdiutil convert /tmp/Sequoia.sparseimage -format UDTO -o ./Sequoia-Full.cdr
+          hdiutil convert /tmp/Sequoia.dmg -format UDTO -o ./Sequoia.cdr
           
           echo "Renaming to .iso..."
-          mv ./Sequoia-Full.cdr ./Sequoia-Full.iso
+          mv ./Sequoia.cdr ./Sequoia.iso
           
-          ls -lh ./Sequoia-Full.iso
+          ls -lh ./Sequoia.iso
 
       - name: Split ISO into 500MB chunks
         run: |
           # Split the 16GB ISO into 500MB parts named Sequoia.iso.001, .002, etc.
-          split -b 500m ./Sequoia-Full.iso ./Sequoia.iso.
+          split -b 500m ./Sequoia.iso ./split/Sequoia.iso.
           
           # Delete the original massive file to save space
           rm ./Sequoia-Full.iso
