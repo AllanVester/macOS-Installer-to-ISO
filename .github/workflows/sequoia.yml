@@ -42,7 +42,7 @@ jobs:
           hdiutil create -o /tmp/Sequoia -size 18432m -volname Sequoia -layout SPUD -fs HFS+J
           
           echo "Mounting disk image..."
-          hdiutil attach /tmp/Sequoia.sparseimage -noverify -mountpoint /Volumes/Sequoia
+          hdiutil attach /tmp/Sequoia.dmg -noverify -mountpoint /Volumes/Sequoia
 
       - name: Create Install Media
         run: |
