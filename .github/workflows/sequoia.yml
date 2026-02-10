@@ -39,7 +39,7 @@ jobs:
         run: |
           echo "Creating empty disk image..."
           # Use a sparse image to save space until it's filled
-          hdiutil create -o /tmp/Sequoia -size 16384m -volname Sequoia -layout SPUD -fs HFS+J -type SPARSE
+          hdiutil create -o /tmp/Sequoia -size 18432m -volname Sequoia -layout SPUD -fs HFS+J
           
           echo "Mounting disk image..."
           hdiutil attach /tmp/Sequoia.sparseimage -noverify -mountpoint /Volumes/Sequoia
@@ -65,3 +65,11 @@ jobs:
           mv ./Sequoia-Full.cdr ./Sequoia-Full.iso
           
           ls -lh ./Sequoia-Full.iso
+
+      - name: Split ISO into 500MB chunks
+        run: |
+          # Split the 16GB ISO into 500MB parts named Sequoia.iso.001, .002, etc.
+          split -b 500m ./Sequoia-Full.iso ./Sequoia.iso.
+          
+          # Delete the original massive file to save space
+          rm ./Sequoia-Full.iso
