@@ -70,8 +70,5 @@ jobs:
         run: |
           # Create the destination directory
           mkdir -p ./split
-          
           # Split the 16GB ISO into 500MB parts named Sequoia.iso.001, .002, etc.
           split -b 500m ./Sequoia.iso ./split/Sequoia.iso.
-          # Delete the original massive file to save space
-          rm ./Sequoia-Full.iso
