@@ -5,7 +5,7 @@ on:
 
 jobs:
   build-iso:
-    runs-on: macos-13
+    runs-on: macos-15-intel
     timeout-minutes: 360
     steps:
       - name: Checkout (Optional but good practice)
