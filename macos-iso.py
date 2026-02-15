@@ -259,7 +259,7 @@ def createISO(version, filePath):
         if version == 'lion':
 
             process = subprocess.run(
-                f'hdiutil convert ./Lion.dmg -format UDTO -o ./Lion.cdr',
+                f'hdiutil convert {filePath}/Lion.dmg -format UDTO -o {filePath}/Lion.cdr',
                 shell = True,
                 check = True,
                 text = True,
@@ -272,7 +272,7 @@ def createISO(version, filePath):
                 print(f"Could not convert Lion.dmg to Lion.cdr: {process.stderr}.")
                 
             process = subprocess.run(
-                f'mv ./Lion.cdr ./Lion.iso',
+                f'mv {filePath}/Lion.cdr {filePath}/Lion.iso',
                 shell = True,
                 check = True,
                 text = True,
