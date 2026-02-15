@@ -150,19 +150,21 @@ def downloadISO(version, filePath):
             pass
 
         if version == 'lion':
-
-            process = subprocess.run(
-                f'curl -L -o {filePath}/Lion.dmg "https://archive.org/download/install-mac-os-x-lion.app/Install%20Mac%20OS%20X%20Lion.app.zip/Install%20Mac%20OS%20X%20Lion.app%2FContents%2FSharedSupport%2FInstallESD.dmg"',
-                shell = True,
-                check = True,
-                text = True,
-                stdout = subprocess.PIPE,
-                stderr = subprocess.PIPE,
-            )
             
-            if process.returncode != 0:
+            pass
 
-                print(f"Could not download Lion.dmg: {process.stderr}.")
+            # process = subprocess.run(
+            #     f'curl -L -o {filePath}/Lion.dmg "https://archive.org/download/install-mac-os-x-lion.app/Install%20Mac%20OS%20X%20Lion.app.zip/Install%20Mac%20OS%20X%20Lion.app%2FContents%2FSharedSupport%2FInstallESD.dmg"',
+            #     shell = True,
+            #     check = True,
+            #     text = True,
+            #     stdout = subprocess.PIPE,
+            #     stderr = subprocess.PIPE,
+            # )
+            
+            # if process.returncode != 0:
+
+            #     print(f"Could not download Lion.dmg: {process.stderr}.")
 
         if version == 'mountainlion':
 
