@@ -10,6 +10,19 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
+
+      - name: Checkout Lion repository
+        uses: actions/checkout@v6
+        with:
+          repository: "${{ github.repository_owner }}/Mac-OS-X-Lion-Installer-11A511"
+          path: "${{ github.workspace }}/temp/"
+          token: "${{ secrets.PAT }}"
+
+      - name: Stitch DMG parts and save to Workspace
+        run: |
+          cat ${{ github.workspace }}/temp/Lion.dmg.part* > ${{ github.workspace }}/Lion.dmg
+          
+          rm -rf ${{ github.workspace }}/temp/
         
       - name: Install Python
         uses: actions/setup-python@v6
