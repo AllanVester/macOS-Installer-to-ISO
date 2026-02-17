@@ -5,9 +5,28 @@ on:
 
 jobs:
   build-iso:
-    runs-on: macos-latest
+    runs-on: macos-15-latest
     timeout-minutes: 360
     steps:
+      - name: Display runner information
+        run: |
+          echo "cpu-core:       $(nproc --all)"
+          echo "cpu-model:      $(grep 'model name' /proc/cpuinfo | head -1 | cut -d: -f2- | sed 's/^[[:space:]]*//')"
+          echo "hostname:       $(hostname)"
+          echo "kernel-release: $(uname -r)"
+          echo "kernel-version: $(uname -v)"
+          echo "name:           $(grep '^NAME=' /etc/os-release | head -1 | cut -d= -f2- | tr -d '\"')"
+          echo "platform:       $(uname -s)"
+          echo "release:        $(grep '^VERSION_ID=' /etc/os-release | head -1 | cut -d= -f2- | tr -d '\"')"
+          echo "total-memory:   $(grep MemTotal /proc/meminfo | awk '{print $2 * 1024}')"
+
+      - name: Free up disk space
+        run: |
+          df -h
+          sudo rm -rf /Users/runner/Library/Android/sdk
+          sudo rm -rf /Library/Developer/CommandLineTools
+          df -h
+          
       - name: Checkout repository
         uses: actions/checkout@v6
         with:
