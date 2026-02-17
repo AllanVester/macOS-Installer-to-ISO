@@ -53,19 +53,14 @@ jobs:
           git config --global user.email "vesterallan246@gmail.com"
           git config --global http.postBuffer 104857600
 
-      - name: Free up disk space (Attempt)
-        run: |
-          # This helps slightly on standard runners, but usually isn't enough for this task
-          sudo rm -rf /Users/runner/Library/Android/sdk
-          sudo rm -rf /Library/Developer/CommandLineTools
-          df -h
+      - name: Install Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.x'
 
       - name: Download macOS Sequoia BaseSystem.dmg 
         run: |
-          until curl -f -L -C - -o ${{ github.workspace }}/Sequoia.dmg "http://oscdn.apple.com/content/downloads/04/11/082-33203/orvwro1v8xhjrakr7tvl5hu1s1ew3epxne/RecoveryImage/BaseSystem.dmg"; do
-            echo "Download failed or interrupted. Retrying in 5 seconds..."
-            sleep 5
-          done
+          python3 macrecovery.py -b Mac-226CB3C6A851A671 -m 00000000000000000 download
 
       - name: Split DMG into 100MB chunks
         run: |
