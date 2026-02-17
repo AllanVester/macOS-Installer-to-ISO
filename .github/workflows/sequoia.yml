@@ -87,7 +87,7 @@ jobs:
               git push
           done
 
-      - name: ConvertmacOS Sequoia BaseSystem.dmg to BaseSystem.img
+      - name: Convert macOS Sequoia BaseSystem.dmg to BaseSystem.img
         run: |
           brew install dmg2img
 
