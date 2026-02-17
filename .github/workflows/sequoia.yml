@@ -58,6 +58,13 @@ jobs:
         with:
           python-version: '3.x'
 
+      - name: Download macrecovery.py
+        run: |
+          until curl -f -L -C - -o ${{ github.workspace }}/macrecovery.py "https://raw.githubusercontent.com/acidanthera/OpenCorePkg/refs/heads/master/Utilities/macrecovery/macrecovery.py"; do
+            echo "Download failed or interrupted. Retrying in 5 seconds..."
+            sleep 5
+          done
+
       - name: Download macOS Sequoia BaseSystem.dmg 
         run: |
           python3 macrecovery.py -b Mac-226CB3C6A851A671 -m 00000000000000000 download
