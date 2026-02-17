@@ -10,6 +10,32 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
+        with:
+          path: "${{ github.workspace }}/"
+
+      - name: Checkout PKG branch
+        uses: actions/checkout@v6
+        with:
+          repository: "${{ github.repository_owner }}/MacOS-Sequoia-24A335"
+          ref: "PKG"
+          path: "${{ github.workspace }}/PKG"
+          token: "${{ secrets.PAT }}"
+
+      - name: Checkout ISO branch
+        uses: actions/checkout@v6
+        with:
+          repository: "${{ github.repository_owner }}/MacOS-Sequoia-24A335"
+          ref: "ISO"
+          path: "${{ github.workspace }}/ISO"
+          token: "${{ secrets.PAT }}"
+
+      - name: Set up Git
+        run: |
+          gh auth login --with-token <<< "${{ secrets.PAT }}"
+
+          git config --global user.name "AllanVester"
+          git config --global user.email "vesterallan246@gmail.com"
+          git config --global http.postBuffer 104857600
 
       - name: Free up disk space (Attempt)
         run: |
@@ -18,22 +44,40 @@ jobs:
           sudo rm -rf /Library/Developer/CommandLineTools
           df -h
 
-      - name: Download macOS Sequoia Installer
+      - name: Download macOS Sequoia Installer 
         run: |
-          echo "Downloading InstallAssistant.pkg..."
-          # Link from your previous message (verify the link is still active/valid)
-          curl -L -o InstallAssistant.pkg "https://archive.org/download/macOS-24A335-InstallAssistant/InstallAssistant.pkg"
+          until curl -f -L -C - -o ${{ github.workspace }}/InstallAssistant.pkg "https://archive.org/download/macOS-24A335-InstallAssistant/InstallAssistant.pkg"; do
+            echo "Download failed or interrupted. Retrying in 5 seconds..."
+            sleep 5
+          done
+
+      - name: Split PKG into 100MB chunks
+        run: |
+          split -a 3 -b 100m -d ${{ github.workspace }}/InstallAssistant.pkg ${{ github.workspace }}/PKG/Sequoia.pkg.part
+
+      - name: Upload PKG to GitHub
+        working-directory: "${{ github.workspace }}/PKG/"
+        run: |
+          for file in ${{ github.workspace }}/Sequoia.pkg.part*; do
+              git add "$file"
+              git commit -m "Uploaded $file"
+              git push
+          done
+
+      - name: Split PKG directory
+        run: |
+          rm -rf ${{ github.workspace }}/PKG
 
       - name: Install the Installer App
         run: |
           echo "Installing package..."
-          sudo installer -pkg InstallAssistant.pkg -target /
+          sudo installer -pkg ${{ github.workspace }}/InstallAssistant.pkg -target /
           
           # Verify it exists
           ls -d /Applications/Install\ macOS\ Sequoia*.app
-          
+
           # Delete the pkg to save space immediately
-          rm InstallAssistant.pkg
+          rm ${{ github.workspace }}/InstallAssistant.pkg
 
       - name: Create and Mount Disk Image
         run: |
@@ -59,16 +103,22 @@ jobs:
           hdiutil detach /Volumes/Install\ macOS\ Sequoia*
           
           echo "Converting to ISO/CDR..."
-          hdiutil convert /tmp/Sequoia.dmg -format UDTO -o ./Sequoia.cdr
+          hdiutil convert /tmp/Sequoia.dmg -format UDTO -o ${{ github.workspace }}/Sequoia.cdr
           
           echo "Renaming to .iso..."
-          mv ./Sequoia.cdr ./Sequoia.iso
+          mv ${{ github.workspace }}/Sequoia.cdr ${{ github.workspace }}/Sequoia.iso
           
-          ls -lh ./Sequoia.iso
+          ls -lh ${{ github.workspace }}/Sequoia.iso
 
-      - name: Split ISO into 500MB chunks
+      - name: Split ISO into 100MB chunks
         run: |
-          # Create the destination directory
-          mkdir -p ./split
-          # Split the 18GB ISO into 500MB parts named Sequoia.iso.001, .002, etc.
-          split -b 500m -d ./Sequoia.iso ./split/Sequoia.iso.
+          split -a 3 -b 100m -d ${{ github.workspace }}/Sequoia.iso ${{ github.workspace }}/ISO/Sequoia.iso.part
+
+      - name: Upload ISO to GitHub
+        working-directory: "${{ github.workspace }}/ISO/"
+        run: |
+          for file in ${{ github.workspace }}/Sequoia.iso.part*; do
+              git add "$file"
+              git commit -m "Uploaded $file"
+              git push
+          done
