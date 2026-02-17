@@ -68,6 +68,7 @@ jobs:
       - name: Download macOS Sequoia BaseSystem.dmg 
         run: |
           sed -i.bak 's/os.get_terminal_size().columns/80/g' macrecovery.py
+          sed -i.bak 's/com.apple.recovery.boot/./g' macrecovery.py
           
           python3 macrecovery.py -b Mac-226CB3C6A851A671 -m 00000000000000000 download
 
