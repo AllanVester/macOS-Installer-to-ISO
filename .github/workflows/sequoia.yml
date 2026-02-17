@@ -58,7 +58,7 @@ jobs:
       - name: Upload PKG to GitHub
         working-directory: "${{ github.workspace }}/PKG/"
         run: |
-          for file in ${{ github.workspace }}/Sequoia.pkg.part*; do
+          for file in ${{ github.workspace }}/PKG/Sequoia.pkg.part*; do
               git add "$file"
               git commit -m "Uploaded $file"
               git push
@@ -117,7 +117,7 @@ jobs:
       - name: Upload ISO to GitHub
         working-directory: "${{ github.workspace }}/ISO/"
         run: |
-          for file in ${{ github.workspace }}/Sequoia.iso.part*; do
+          for file in ${{ github.workspace }}/ISO/Sequoia.iso.part*; do
               git add "$file"
               git commit -m "Uploaded $file"
               git push
