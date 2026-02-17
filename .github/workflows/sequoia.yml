@@ -73,7 +73,7 @@ jobs:
 
       - name: Split DMG into 100MB chunks
         run: |
-          split -a 3 -b 100m -d ${{ github.workspace }}/Sequoia.dmg ${{ github.workspace }}/DMG/Sequoia.dmg.part
+          split -a 3 -b 100m -d ${{ github.workspace }}/BaseSystem.dmg ${{ github.workspace }}/DMG/Sequoia.dmg.part
 
       - name: Upload DMG to GitHub
         working-directory: "${{ github.workspace }}/DMG/"
@@ -88,7 +88,7 @@ jobs:
         run: |
           brew install dmg2img
 
-          dmg2img -i ${{ github.workspace }}/Sequoia.dmg -o ${{ github.workspace }}/Sequoia.img
+          dmg2img -i ${{ github.workspace }}/BaseSystem.dmg -o ${{ github.workspace }}/Sequoia.img
 
       - name: Split IMG into 100MB chunks
         run: |
