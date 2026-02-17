@@ -29,6 +29,22 @@ jobs:
           path: "${{ github.workspace }}/ISO"
           token: "${{ secrets.PAT }}"
 
+      - name: Checkout DMG branch
+        uses: actions/checkout@v6
+        with:
+          repository: "${{ github.repository_owner }}/MacOS-Sequoia-24A335"
+          ref: "DMG"
+          path: "${{ github.workspace }}/DMG"
+          token: "${{ secrets.PAT }}"
+
+      - name: Checkout IMG branch
+        uses: actions/checkout@v6
+        with:
+          repository: "${{ github.repository_owner }}/MacOS-Sequoia-24A335"
+          ref: "IMG"
+          path: "${{ github.workspace }}/IMG"
+          token: "${{ secrets.PAT }}"
+
       - name: Set up Git
         run: |
           gh auth login --with-token <<< "${{ secrets.PAT }}"
@@ -43,6 +59,45 @@ jobs:
           sudo rm -rf /Users/runner/Library/Android/sdk
           sudo rm -rf /Library/Developer/CommandLineTools
           df -h
+
+      - name: Download macOS Sequoia BaseSystem.dmg 
+        run: |
+          until curl -f -L -C - -o ${{ github.workspace }}/Sequoia.dmg "http://oscdn.apple.com/content/downloads/04/11/082-33203/orvwro1v8xhjrakr7tvl5hu1s1ew3epxne/RecoveryImage/BaseSystem.dmg"; do
+            echo "Download failed or interrupted. Retrying in 5 seconds..."
+            sleep 5
+          done
+
+      - name: Split DMG into 100MB chunks
+        run: |
+          split -a 3 -b 100m -d ${{ github.workspace }}/Sequoia.dmg ${{ github.workspace }}/DMG/Sequoia.dmg.part
+
+      - name: Upload DMG to GitHub
+        working-directory: "${{ github.workspace }}/DMG/"
+        run: |
+          for file in Sequoia.dmg.part*; do
+              git add "$file"
+              git commit -m "Uploaded $file"
+              git push
+          done
+
+      - name: ConvertmacOS Sequoia BaseSystem.dmg to BaseSystem.img
+        run: |
+          brew install dmg2img
+
+          dmg2img -i ${{ github.workspace }}/Sequoia.dmg -o ${{ github.workspace }}/Sequoia.img
+
+      - name: Split IMG into 100MB chunks
+        run: |
+          split -a 3 -b 100m -d ${{ github.workspace }}/Sequoia.img ${{ github.workspace }}/IMG/Sequoia.img.part
+
+      - name: Upload IMG to GitHub
+        working-directory: "${{ github.workspace }}/IMG/"
+        run: |
+          for file in Sequoia.img.part*; do
+              git add "$file"
+              git commit -m "Uploaded $file"
+              git push
+          done
 
       - name: Download macOS Sequoia Installer 
         run: |
