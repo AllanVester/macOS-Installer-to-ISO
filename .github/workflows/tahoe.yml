@@ -1,0 +1,232 @@
+name: Build macOS Tahoe ISO (25A354)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-iso:
+    runs-on: macos-15-intel
+    timeout-minutes: 360
+    steps:
+      - name: Display runner information
+        run: |
+          echo "cpu-core:       $(nproc --all)"
+          echo "cpu-model:      $(grep 'model name' /proc/cpuinfo | head -1 | cut -d: -f2- | sed 's/^[[:space:]]*//')"
+          echo "hostname:       $(hostname)"
+          echo "kernel-release: $(uname -r)"
+          echo "kernel-version: $(uname -v)"
+          echo "name:           $(grep '^NAME=' /etc/os-release | head -1 | cut -d= -f2- | tr -d '\"')"
+          echo "platform:       $(uname -s)"
+          echo "release:        $(grep '^VERSION_ID=' /etc/os-release | head -1 | cut -d= -f2- | tr -d '\"')"
+          echo "total-memory:   $(grep MemTotal /proc/meminfo | awk '{print $2 * 1024}')"
+
+      - name: Free up disk space
+        run: |
+          df -h
+          sudo rm -rf /Users/runner/Library/Android/sdk
+          sudo rm -rf /Library/Developer/CommandLineTools
+          df -h
+
+      - name: Set up Git
+        run: |
+          gh auth login --with-token <<< "${{ secrets.PAT }}"
+
+          git config --global user.name "AllanVester"
+          git config --global user.email "vesterallan246@gmail.com"
+          git config --global http.postBuffer 104857600
+          
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          path: "${{ github.workspace }}/"
+
+      - name: Checkout orphan branch
+        uses: actions/checkout@v6
+        with:
+          repository: "${{ github.repository_owner }}/MacOS-Tahoe-25A354"
+          ref: "orphan"
+          path: "${{ github.workspace }}/orphan"
+          token: "${{ secrets.PAT }}"
+
+      - name: Create new branches
+        working-directory: "${{ github.workspace }}/orphan/"
+        run: |
+          git switch --orphan PKG
+          git commit --allow-empty -m "Created PKG branch"
+          git push --set-upstream origin PKG
+
+          git switch --orphan ISO
+          git commit --allow-empty -m "Created ISO branch"
+          git push --set-upstream origin ISO
+
+          git switch --orphan DMG
+          git commit --allow-empty -m "Created DMG branch"
+          git push --set-upstream origin DMG
+
+          git switch --orphan IMG
+          git commit --allow-empty -m "Created IMG branch"
+          git push --set-upstream origin IMG
+
+      - name: Checkout PKG branch
+        uses: actions/checkout@v6
+        with:
+          repository: "${{ github.repository_owner }}/MacOS-Tahoe-25A354"
+          ref: "PKG"
+          path: "${{ github.workspace }}/PKG"
+          token: "${{ secrets.PAT }}"
+
+      - name: Checkout ISO branch
+        uses: actions/checkout@v6
+        with:
+          repository: "${{ github.repository_owner }}/MacOS-Tahoe-25A354"
+          ref: "ISO"
+          path: "${{ github.workspace }}/ISO"
+          token: "${{ secrets.PAT }}"
+
+      - name: Checkout DMG branch
+        uses: actions/checkout@v6
+        with:
+          repository: "${{ github.repository_owner }}/MacOS-Tahoe-25A354"
+          ref: "DMG"
+          path: "${{ github.workspace }}/DMG"
+          token: "${{ secrets.PAT }}"
+
+      - name: Checkout IMG branch
+        uses: actions/checkout@v6
+        with:
+          repository: "${{ github.repository_owner }}/MacOS-Tahoe-25A354"
+          ref: "IMG"
+          path: "${{ github.workspace }}/IMG"
+          token: "${{ secrets.PAT }}"
+
+      - name: Install Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.x'
+
+      - name: Download macrecovery.py
+        run: |
+          until curl -f -L -C - -o ${{ github.workspace }}/macrecovery.py "https://raw.githubusercontent.com/acidanthera/OpenCorePkg/refs/heads/master/Utilities/macrecovery/macrecovery.py"; do
+            echo "Download failed or interrupted. Retrying in 5 seconds..."
+            sleep 5
+          done
+
+      - name: Download macOS Tahoe BaseSystem.dmg 
+        run: |
+          sed -i.bak 's/os.get_terminal_size().columns/80/g' macrecovery.py
+          sed -i.bak 's/com.apple.recovery.boot/./g' macrecovery.py
+          
+          python3 macrecovery.py -b Mac-CFF7D910A743CAAF -m 00000000000000000 -os latest download
+
+      - name: Split DMG into 100MB chunks
+        run: |
+          ls -lh ${{ github.workspace }}/BaseSystem.dmg
+          
+          split -a 3 -b 100m -d "${{ github.workspace }}/BaseSystem.dmg" "${{ github.workspace }}/DMG/Tahoe.dmg.part"
+
+      - name: Upload DMG to GitHub
+        working-directory: "${{ github.workspace }}/DMG/"
+        run: |
+          for file in Tahoe.dmg.part*; do
+              git add "$file"
+              git commit -m "Uploaded $file"
+              git push
+          done
+
+      - name: Convert macOS Tahoe BaseSystem.dmg to BaseSystem.img
+        run: |
+          brew install dmg2img
+
+          dmg2img -i ${{ github.workspace }}/BaseSystem.dmg -o ${{ github.workspace }}/Tahoe.img
+
+      - name: Split IMG into 100MB chunks
+        run: |
+          split -a 3 -b 100m -d ${{ github.workspace }}/Tahoe.img ${{ github.workspace }}/IMG/Tahoe.img.part
+
+      - name: Upload IMG to GitHub
+        working-directory: "${{ github.workspace }}/IMG/"
+        run: |
+          for file in Tahoe.img.part*; do
+              git add "$file"
+              git commit -m "Uploaded $file"
+              git push
+          done
+
+      - name: Download macOS Tahoe Installer 
+        run: |
+          until curl -f -L -C - -o ${{ github.workspace }}/InstallAssistant.pkg "https://archive.org/download/macOS-24A335-InstallAssistant/InstallAssistant.pkg"; do
+            echo "Download failed or interrupted. Retrying in 5 seconds..."
+            sleep 5
+          done
+
+      - name: Split PKG into 100MB chunks
+        run: |
+          split -a 3 -b 100m -d ${{ github.workspace }}/InstallAssistant.pkg ${{ github.workspace }}/PKG/Tahoe.pkg.part
+
+      - name: Upload PKG to GitHub
+        working-directory: "${{ github.workspace }}/PKG/"
+        run: |
+          for file in Tahoe.pkg.part*; do
+              git add "$file"
+              git commit -m "Uploaded $file"
+              git push
+          done
+
+      - name: Split PKG directory
+        run: |
+          rm -rf ${{ github.workspace }}/PKG
+
+      - name: Install the Installer App
+        run: |
+          echo "Installing package..."
+          sudo installer -pkg ${{ github.workspace }}/InstallAssistant.pkg -target /
+          
+          # Verify it exists
+          ls -d /Applications/Install\ macOS\ Tahoe*.app
+
+          # Delete the pkg to save space immediately
+          rm ${{ github.workspace }}/InstallAssistant.pkg
+
+      - name: Create and Mount Disk Image
+        run: |
+          echo "Creating empty disk image..."
+          # Use a sparse image to save space until it's filled
+          hdiutil create -o /tmp/Tahoe -size 18432m -volname Tahoe -layout SPUD -fs HFS+J
+          
+          echo "Mounting disk image..."
+          hdiutil attach /tmp/Tahoe.dmg -noverify -mountpoint /Volumes/Tahoe
+
+      - name: Create Install Media
+        run: |
+          echo "Running createinstallmedia (this takes time)..."
+          # We use a wildcard (*) because the app name might vary slightly (e.g. "beta")
+          INSTALLER_PATH=$(find /Applications -name "Install macOS Tahoe*.app" -maxdepth 1 | head -n 1)
+          echo "Found installer at: $INSTALLER_PATH"
+          
+          sudo "$INSTALLER_PATH/Contents/Resources/createinstallmedia" --volume /Volumes/Tahoe --nointeraction
+
+      - name: Unmount and Convert to ISO
+        run: |
+          echo "Unmounting..."
+          hdiutil detach /Volumes/Install\ macOS\ Tahoe*
+          
+          echo "Converting to ISO/CDR..."
+          hdiutil convert /tmp/Tahoe.dmg -format UDTO -o ${{ github.workspace }}/Tahoe.cdr
+          
+          echo "Renaming to .iso..."
+          mv ${{ github.workspace }}/Tahoe.cdr ${{ github.workspace }}/Tahoe.iso
+          
+          ls -lh ${{ github.workspace }}/Tahoe.iso
+
+      - name: Split ISO into 100MB chunks
+        run: |
+          split -a 3 -b 100m -d ${{ github.workspace }}/Tahoe.iso ${{ github.workspace }}/ISO/Tahoe.iso.part
+
+      - name: Upload ISO to GitHub
+        working-directory: "${{ github.workspace }}/ISO/"
+        run: |
+          for file in Tahoe.iso.part*; do
+              git add "$file"
+              git commit -m "Uploaded $file"
+              git push
+          done
