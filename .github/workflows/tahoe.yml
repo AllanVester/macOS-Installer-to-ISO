@@ -154,7 +154,7 @@ jobs:
 
       - name: Download macOS Tahoe Installer 
         run: |
-          until curl -f -L -C - -o ${{ github.workspace }}/InstallAssistant.pkg "https://archive.org/download/macOS-24A335-InstallAssistant/InstallAssistant.pkg"; do
+          until curl -f -L -C - -o ${{ github.workspace }}/InstallAssistant.pkg "https://archive.org/download/install-assistant_20250137/InstallAssistant.pkg"; do
             echo "Download failed or interrupted. Retrying in 5 seconds..."
             sleep 5
           done
