@@ -182,7 +182,7 @@ jobs:
           sudo installer -pkg ${{ github.workspace }}/InstallAssistant.pkg -target /
           
           # Verify it exists
-          ls -d /Applications/Install\ macOS\ Big Sur*.app
+          ls -d /Applications/Install\ macOS\ Big\ Sur*.app
 
           # Delete the pkg to save space immediately
           rm ${{ github.workspace }}/InstallAssistant.pkg
