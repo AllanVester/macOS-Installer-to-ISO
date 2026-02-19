@@ -1,0 +1,232 @@
+name: Build macOS Big Sur ISO (20B29)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-iso:
+    runs-on: macos-15-intel
+    timeout-minutes: 360
+    steps:
+      - name: Display runner information
+        run: |
+          echo "cpu-core:       $(nproc --all)"
+          echo "cpu-model:      $(grep 'model name' /proc/cpuinfo | head -1 | cut -d: -f2- | sed 's/^[[:space:]]*//')"
+          echo "hostname:       $(hostname)"
+          echo "kernel-release: $(uname -r)"
+          echo "kernel-version: $(uname -v)"
+          echo "name:           $(grep '^NAME=' /etc/os-release | head -1 | cut -d= -f2- | tr -d '\"')"
+          echo "platform:       $(uname -s)"
+          echo "release:        $(grep '^VERSION_ID=' /etc/os-release | head -1 | cut -d= -f2- | tr -d '\"')"
+          echo "total-memory:   $(grep MemTotal /proc/meminfo | awk '{print $2 * 1024}')"
+
+      - name: Free up disk space
+        run: |
+          df -h
+          sudo rm -rf /Users/runner/Library/Android/sdk
+          sudo rm -rf /Library/Developer/CommandLineTools
+          df -h
+
+      - name: Set up Git
+        run: |
+          gh auth login --with-token <<< "${{ secrets.PAT }}"
+
+          git config --global user.name "AllanVester"
+          git config --global user.email "vesterallan246@gmail.com"
+          git config --global http.postBuffer 104857600
+          
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          path: "${{ github.workspace }}/"
+
+      - name: Checkout orphan branch
+        uses: actions/checkout@v6
+        with:
+          repository: "${{ github.repository_owner }}/MacOS-BigSur-20B29"
+          ref: "orphan"
+          path: "${{ github.workspace }}/orphan"
+          token: "${{ secrets.PAT }}"
+
+      - name: Create new branches
+        working-directory: "${{ github.workspace }}/orphan/"
+        run: |
+          git switch --orphan PKG
+          git commit --allow-empty -m "Created PKG branch"
+          git push --set-upstream origin PKG
+
+          git switch --orphan ISO
+          git commit --allow-empty -m "Created ISO branch"
+          git push --set-upstream origin ISO
+
+          git switch --orphan DMG
+          git commit --allow-empty -m "Created DMG branch"
+          git push --set-upstream origin DMG
+
+          git switch --orphan IMG
+          git commit --allow-empty -m "Created IMG branch"
+          git push --set-upstream origin IMG
+
+      - name: Checkout PKG branch
+        uses: actions/checkout@v6
+        with:
+          repository: "${{ github.repository_owner }}/MacOS-BigSur-20B29"
+          ref: "PKG"
+          path: "${{ github.workspace }}/PKG"
+          token: "${{ secrets.PAT }}"
+
+      - name: Checkout ISO branch
+        uses: actions/checkout@v6
+        with:
+          repository: "${{ github.repository_owner }}/MacOS-BigSur-20B29"
+          ref: "ISO"
+          path: "${{ github.workspace }}/ISO"
+          token: "${{ secrets.PAT }}"
+
+      - name: Checkout DMG branch
+        uses: actions/checkout@v6
+        with:
+          repository: "${{ github.repository_owner }}/MacOS-BigSur-20B29"
+          ref: "DMG"
+          path: "${{ github.workspace }}/DMG"
+          token: "${{ secrets.PAT }}"
+
+      - name: Checkout IMG branch
+        uses: actions/checkout@v6
+        with:
+          repository: "${{ github.repository_owner }}/MacOS-BigSur-20B29"
+          ref: "IMG"
+          path: "${{ github.workspace }}/IMG"
+          token: "${{ secrets.PAT }}"
+
+      - name: Install Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.x'
+
+      - name: Download macrecovery.py
+        run: |
+          until curl -f -L -C - -o ${{ github.workspace }}/macrecovery.py "https://raw.githubusercontent.com/acidanthera/OpenCorePkg/refs/heads/master/Utilities/macrecovery/macrecovery.py"; do
+            echo "Download failed or interrupted. Retrying in 5 seconds..."
+            sleep 5
+          done
+
+      - name: Download macOS Big Sur BaseSystem.dmg 
+        run: |
+          sed -i.bak 's/os.get_terminal_size().columns/80/g' macrecovery.py
+          sed -i.bak 's/com.apple.recovery.boot/./g' macrecovery.py
+          
+          python3 macrecovery.py -b Mac-2BD1B31983FE1663 -m 00000000000000000 download
+
+      - name: Split DMG into 100MB chunks
+        run: |
+          ls -lh ${{ github.workspace }}/BaseSystem.dmg
+          
+          split -a 3 -b 100m -d "${{ github.workspace }}/BaseSystem.dmg" "${{ github.workspace }}/DMG/BigSur.dmg.part"
+
+      - name: Upload DMG to GitHub
+        working-directory: "${{ github.workspace }}/DMG/"
+        run: |
+          for file in BigSur.dmg.part*; do
+              git add "$file"
+              git commit -m "Uploaded $file"
+              git push
+          done
+
+      - name: Convert macOS Big Sur BaseSystem.dmg to BaseSystem.img
+        run: |
+          brew install dmg2img
+
+          dmg2img -i ${{ github.workspace }}/BaseSystem.dmg -o ${{ github.workspace }}/BigSur.img
+
+      - name: Split IMG into 100MB chunks
+        run: |
+          split -a 3 -b 100m -d ${{ github.workspace }}/BigSur.img ${{ github.workspace }}/IMG/BigSur.img.part
+
+      - name: Upload IMG to GitHub
+        working-directory: "${{ github.workspace }}/IMG/"
+        run: |
+          for file in BigSur.img.part*; do
+              git add "$file"
+              git commit -m "Uploaded $file"
+              git push
+          done
+
+      - name: Download macOS Big Sur Installer 
+        run: |
+          until curl -f -L -C - -o ${{ github.workspace }}/InstallAssistant.pkg "https://archive.org/download/install-assistant-11.0.1/InstallAssistant11.0.1.pkg"; do
+            echo "Download failed or interrupted. Retrying in 5 seconds..."
+            sleep 5
+          done
+
+      - name: Split PKG into 100MB chunks
+        run: |
+          split -a 3 -b 100m -d ${{ github.workspace }}/InstallAssistant.pkg ${{ github.workspace }}/PKG/BigSur.pkg.part
+
+      - name: Upload PKG to GitHub
+        working-directory: "${{ github.workspace }}/PKG/"
+        run: |
+          for file in BigSur.pkg.part*; do
+              git add "$file"
+              git commit -m "Uploaded $file"
+              git push
+          done
+
+      - name: Split PKG directory
+        run: |
+          rm -rf ${{ github.workspace }}/PKG
+
+      - name: Install the Installer App
+        run: |
+          echo "Installing package..."
+          sudo installer -pkg ${{ github.workspace }}/InstallAssistant.pkg -target /
+          
+          # Verify it exists
+          ls -d /Applications/Install\ macOS\ Big Sur*.app
+
+          # Delete the pkg to save space immediately
+          rm ${{ github.workspace }}/InstallAssistant.pkg
+
+      - name: Create and Mount Disk Image
+        run: |
+          echo "Creating empty disk image..."
+          # Use a sparse image to save space until it's filled
+          hdiutil create -o /tmp/BigSur -size 18432m -volname BigSur -layout SPUD -fs HFS+J
+          
+          echo "Mounting disk image..."
+          hdiutil attach /tmp/BigSur.dmg -noverify -mountpoint /Volumes/BigSur
+
+      - name: Create Install Media
+        run: |
+          echo "Running createinstallmedia (this takes time)..."
+          # We use a wildcard (*) because the app name might vary slightly (e.g. "beta")
+          INSTALLER_PATH=$(find /Applications -name "Install macOS Big Sur*.app" -maxdepth 1 | head -n 1)
+          echo "Found installer at: $INSTALLER_PATH"
+          
+          sudo "$INSTALLER_PATH/Contents/Resources/createinstallmedia" --volume /Volumes/BigSur --nointeraction
+
+      - name: Unmount and Convert to ISO
+        run: |
+          echo "Unmounting..."
+          hdiutil detach /Volumes/Install\ macOS\ Big Sur*
+          
+          echo "Converting to ISO/CDR..."
+          hdiutil convert /tmp/BigSur.dmg -format UDTO -o ${{ github.workspace }}/BigSur.cdr
+          
+          echo "Renaming to .iso..."
+          mv ${{ github.workspace }}/BigSur.cdr ${{ github.workspace }}/BigSur.iso
+          
+          ls -lh ${{ github.workspace }}/BigSur.iso
+
+      - name: Split ISO into 100MB chunks
+        run: |
+          split -a 3 -b 100m -d ${{ github.workspace }}/BigSur.iso ${{ github.workspace }}/ISO/BigSur.iso.part
+
+      - name: Upload ISO to GitHub
+        working-directory: "${{ github.workspace }}/ISO/"
+        run: |
+          for file in BigSur.iso.part*; do
+              git add "$file"
+              git commit -m "Uploaded $file"
+              git push
+          done
