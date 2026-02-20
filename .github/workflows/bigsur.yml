@@ -208,8 +208,8 @@ jobs:
       - name: Unmount and Convert to ISO
         run: |
           echo "Unmounting..."
-          sleep 60
-          hdiutil detach /Volumes/Install\ macOS\ Big\ Sur*
+          lsof | grep "/Volumes/Install macOS Big Sur" || true
+          hdiutil detach /Volumes/Install\ macOS\ Big\ Sur* -force
           
           echo "Converting to ISO/CDR..."
           hdiutil convert /tmp/BigSur.dmg -format UDTO -o ${{ github.workspace }}/BigSur.cdr
