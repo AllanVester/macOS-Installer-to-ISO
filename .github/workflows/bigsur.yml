@@ -208,6 +208,7 @@ jobs:
       - name: Unmount and Convert to ISO
         run: |
           echo "Unmounting..."
+          sleep 60
           hdiutil detach /Volumes/Install\ macOS\ Big\ Sur*
           
           echo "Converting to ISO/CDR..."
