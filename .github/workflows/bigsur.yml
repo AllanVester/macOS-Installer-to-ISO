@@ -191,7 +191,7 @@ jobs:
         run: |
           echo "Creating empty disk image..."
           # Use a sparse image to save space until it's filled
-          hdiutil create -o /tmp/BigSur -size 18432m -volname BigSur -layout SPUD -fs HFS+J
+          hdiutil create -o /tmp/BigSur -size 14336m -volname BigSur -layout SPUD -fs HFS+J
           
           echo "Mounting disk image..."
           hdiutil attach /tmp/BigSur.dmg -noverify -mountpoint /Volumes/BigSur
@@ -208,8 +208,7 @@ jobs:
       - name: Unmount and Convert to ISO
         run: |
           echo "Unmounting..."
-          sudo mdutil -i off "/Volumes/Install macOS Big Sur"
-          hdiutil detach "/Volumes/Install macOS Big Sur"
+          hdiutil detach "/Volumes/Install macOS Big Sur" -force
           
           echo "Converting to ISO/CDR..."
           hdiutil convert /tmp/BigSur.dmg -format UDTO -o ${{ github.workspace }}/BigSur.cdr
