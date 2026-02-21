@@ -208,7 +208,7 @@ jobs:
       - name: Unmount and Convert to ISO
         run: |
           echo "Unmounting..."
-          lsof | grep "/Volumes/Install macOS Big Sur" || true
+          sudo mdutil -i off "/Volumes/Install macOS Big Sur"
           hdiutil detach "/Volumes/Install macOS Big Sur"
           
           echo "Converting to ISO/CDR..."
